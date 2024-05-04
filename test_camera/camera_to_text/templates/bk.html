@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    {% load static %}
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+        }
+
+        .navbar-dark .navbar-nav .nav-link {
+            color: white;
+        }
+
+        .form-control {
+            border-radius: 0;
+        }
+
+        .container-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .card {
+            border: none;
+            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-body {
+            padding: 2rem;
+        }
+
+        #video_feed {
+            width: 100%;
+            height: auto;
+            border-radius: 10px;
+        }
+
+        .card-title {
+            color: #343a40;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-text {
+            color: #6c757d;
+            margin-bottom: 1rem;
+        }
+
+        .btn-primary {
+            background-color: #4CAF50;
+            border: none;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: #45a049;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            border: none;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-dark bg-dark sticky-top">
+        <div class="container-fluid">
+            <a class="navbar-brand">Navbar</a>
+            <form class="d-flex">
+                <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
+                <button class="btn btn-outline-info" type="submit">Search</button>
+            </form>
+        </div>
+    </nav>
+
+    <div class="container-wrapper">
+        <div class="container">
+            <div class="row justify-content-center align-items-center">
+                {% if image_url %}
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <img src="{% static image_url %}" id="video_feed" class="card-img-top">
+                        <div class="card-body">
+                            <h5 class="card-title">Fruits Classifier</h5>
+                            {% if predicted_class and accuracy %}
+                            <p class="card-text">
+                                <strong>Fruit name:</strong> <span class="text-success">{{ predicted_class }}</span>
+                            </p>
+                            <p class="card-text">
+                                <strong>Accuracy:</strong> <span class="text-info">{{ accuracy }}</span>
+                            </p>
+                            <p class="card-text">{{ extracted_text }}</p>
+                            {% else %}
+                            <p class="card-text text-muted">Upload fruit image to classify.</p>
+                            {% endif %}
+                            {% if show %}
+                            <audio id="audioPlayer" controls class="w-100">
+                                <source src="{% static 'output.mp3' %}" type="audio/mpeg">
+                                Your browser does not support the audio element.
+                            </audio>
+                            {% endif %}
+                        </div>
+                        <form enctype="multipart/form-data" method="post"
+                            action="{% url 'perform_fruit_detection' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="image" value="{{ image_url }}">
+                            <button type="submit" class="btn btn-primary form-control form-control mb-2 btn-sm">Classify
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <img src="{% static 'lorma.jpg' %}" id="video_feed" class="card-img-top">
+                        <div class="card-body">
+                            <h5 class="card-title">Fruits Classifier</h5>
+                            <p class="card-text text-muted">Upload fruit image to classify.</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="col-md-6">
+                    <div class="row">
+                        <form method="post" enctype="multipart/form-data" id="uploadForm"
+                            action="{% url 'save_image' %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="exampleInputFile" class="form-label">
+                                    <h5>Upload Image</h5>
+                                </label>
+                                <input type="file" class="form-control form-control-sm " id="exampleInputFile"
+                                    name="image" accept="image/*">
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm mb-2">Upload</button>
+                        </form>
+                    </div>
+                    <div class="row mt-2">
+                        <button id="cam" class="btn btn-primary mb-2" type="button">Capture</button>
+                        <a href="{% url 'capture_image' %}" id="textField" style="display: none;"
+                            class="btn btn-primary mb-2">Save</a>
+                        <button id="end" class="btn btn-danger" style="display: none;" type="button">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('exampleInputFile').addEventListener('change', function (event) {
+                var file = event.target.files[0];
+                var reader = new FileReader();
+
+                reader.onload = function (e) {
+
+                    document.getElementById('video_feed').src = e.target.result;
+
+                    // document.getElementById('extractedText').textContent = '';
+                }
+                reader.readAsDataURL(file);
+            });
+        });
+        $(document).ready(function () {
+            $('#cam').click(function () {
+                var videoFeed = document.getElementById('video_feed');
+                var text = document.getElementById("textField");
+                var endButton = document.getElementById("end");
+                videoFeed.src = "{% url 'video_feed' %}";
+                endButton.style.display = "block";
+                text.style.display = "block";
+            });
+        });
+        $(document).ready(function () {
+            $('#end').click(function () {
+                var videoFeed = document.getElementById('video_feed');
+                var text = document.getElementById("textField");
+                var endButton = document.getElementById("end");
+                endButton.style.display = "none";
+                videoFeed.src = "{% static 'lorma.jpg' %}";
+                text.style.display = "none";
+            });
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
+</body>
+
+</html>

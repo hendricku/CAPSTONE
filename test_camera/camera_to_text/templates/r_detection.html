@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fruits Classifier</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <style>
+        .navbar-brand {
+            font-weight: bold;
+        }
+
+        .navbar-dark .navbar-nav .nav-link {
+            color: white;
+        }
+
+        .form-control {
+            border-radius: 0;
+        }
+
+        .container-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .card {
+            border: none;
+            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-body {
+            padding: 2rem;
+        }
+
+        #video_feed {
+            width: 100%;
+            height: auto;
+            border-radius: 10px;
+        }
+
+        .card-title {
+            color: #343a40;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-text {
+            color: #6c757d;
+            margin-bottom: 1rem;
+        }
+
+        .btn-primary {
+            background-color: #4CAF50;
+            border: none;
+            transition: background-color 0.3s ease;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            background-color: #45a049;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            border: none;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+
+<body>
+
+ 
+
+    <div class="container-wrapper">
+        <div class="container">
+            <div class="row justify-content-center align-items-center">
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <video src="" id="video_feed" class="img-thumbnail" autoplay></video>
+                        <div class="card-body">
+                            <h5 class="card-title">Fruits Classifier</h5>
+                            <p class="card-text" id="prediction"></p>
+                            <p class="card-text" id="accuracy"></p>
+                            <p class="card-text" id="message"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row justify-content-center">
+                <div class="col-md-6">
+                    <a href="{% url 'index' %}" class="btn btn-primary mb-2">Back</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function getCSRFToken() {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.startsWith('csrftoken=')) {
+                    return cookie.substring('csrftoken='.length, cookie.length);
+                }
+            }
+            return null;
+        }
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                const video = document.getElementById('video_feed');
+                video.srcObject = stream;
+                setInterval(classifyImage, 5000);
+            })
+            .catch(error => {
+                console.error('Error accessing webcam:', error);
+            });
+
+        async function classifyImage() {
+            const video = document.getElementById('video_feed');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+
+            const formData = new FormData();
+            formData.append('image', imageBlob, 'webcam_image.jpg');
+
+            const csrfToken = getCSRFToken();
+            if (csrfToken) {
+                fetch('/classify/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: formData
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById('prediction').innerText = `Class: ${data.result}`;
+                        document.getElementById('accuracy').innerText = `Accuracy: ${data.accuracy}`;
+                        document.getElementById('message').innerText = `${data.message}`;
+                    })
+                    .catch(error => {
+                        console.error('Error classifying image:', error);
+                    });
+            } else {
+                console.error('CSRF token not found.');
+            }
+        }
+
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
+</body>
+
+</html>

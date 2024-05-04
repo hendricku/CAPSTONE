@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    {% load static %}
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <style>
+        .container-wrapper {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        #video_feed {
+            width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container-wrapper">
+        <div class="container">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-0">
+                        <div class="col-md-4">
+                            {% if image_url %}
+                            <img src="{% static image_url %}" id="video_feed" class="img-thumbnail mb-3">
+                            {% else %}
+                            <img src="{% static 'lorma.png' %}" id="video_feed" class="img-thumbnail mb-3"
+                                alt="Fruit Image">
+                            {% endif %}
+                        </div>
+                        <div class="col-md-8">
+                            <div class="card-body">
+                                <h5 class="card-title mb-0">Fruits Classifier</h5>
+                                {% if predicted_class and accuracy %}
+                                <p class="card-text">
+                                    <h6>Fruit name:</h6><i>{{ predicted_class }}</i></p>
+                                <p class="card-text">
+                                    <h6>Accuracy:</h6><i>{{ accuracy }}</i></p>
+                                <p class="card-text">{{ extracted_text }}</p>
+                                <button id="speechButton" class="btn btn-danger rounded-circle"><i class="bi bi-mic"></i></button>
+                                {% else %}
+                                <p class="card-text text-muted">Upload a fruit image to classify.</p>
+                                {% endif %}
+                                {% if show %}
+                                <audio id="audioPlayer" controls class="w-100">
+                                    <source src="{% static 'output.mp3' %}" type="audio/mpeg">
+                                    Your browser does not support the audio element.
+                                </audio>
+                                {% endif %}
+                                <form enctype="multipart/form-data" method="post"
+                                    action="{% url 'perform_fruit_detection' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="image" value="{{ image_url }}">
+                                    <button type="submit" class="btn btn-success form-control mb-2 btn-sm">Classify
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <form method="post" enctype="multipart/form-data" id="uploadForm"
+                            action="{% url 'save_image' %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="exampleInputFile" class="form-label">
+                                    <h5>Upload Image</h5>
+                                </label>
+                                <input type="file" class="form-control form-control-sm " id="exampleInputFile"
+                                    name="image" accept="image/*">
+                                <!-- 'accept="image/*"' ensures only image files can be selected -->
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm mb-2">Upload</button>
+                        </form>
+                        <button id="cam" class="btn btn-primary mb-2" type="button">Camera</button>
+                        <a href="{% url 'capture_image' %}" id="textField" style="display: none;"
+                            class="btn btn-primary mb-2">Capture</a>
+                        <button id="end" class="btn btn-danger" style="display: none;" type="button">Close Camera
+                        </button>
+                        <a href="{% url 'real_time' %}" id="textField" class="btn btn-primary mb-2">Real Time
+                            Detection</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('speechButton').addEventListener('click', function(){
+
+            fetch('/speech_to_text/').then(response => response.json())
+            .then(data =>{
+
+            }).catch(error =>{
+                console.error('Error', error);
+            })
+        });
+
+
+        $(document).ready(function () {
+            $('#cam').click(function () {
+                var videoFeed = document.getElementById('video_feed');
+                var text = document.getElementById("textField");
+                var endButton = document.getElementById("end");
+                videoFeed.src = "{% url 'video_feed' %}";
+                endButton.style.display = "block";
+                text.style.display = "block";
+            });
+        });
+        $(document).ready(function () {
+            $('#end').click(function () {
+                var videoFeed = document.getElementById('video_feed');
+                var text = document.getElementById("textField");
+                var endButton = document.getElementById("end");
+                endButton.style.display = "none";
+                videoFeed.src = "{% static 'lorma.png' %}";
+                text.style.display = "none";
+            });
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
+</body>
+
+</html>
